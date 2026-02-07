@@ -1,7 +1,0 @@
-#!/bin/bash
-
-SOLVER=cadical-linux
-CNF=$1
-DRAT=$2
-
-LAMR/bin/$SOLVER $CNF $DRAT

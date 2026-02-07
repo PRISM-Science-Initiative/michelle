@@ -1,0 +1,14 @@
+name = "my_project"
+version = "0.1.0"
+defaultTargets = ["my_project"]
+
+[[require]]
+name = "lamr"
+git = "https://github.com/avigad/lamr.git"
+
+[[lean_lib]]
+name = "MyProject"
+
+[[lean_exe]]
+name = "my_project"
+root = "Main"
