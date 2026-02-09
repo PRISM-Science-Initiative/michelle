@@ -7,8 +7,8 @@ inductive Role where
   | cds
   | terminator
   | selection_marker
+  -- add more roles here when we come across them
   deriving BEq, Repr, Inhabited
-
 
 structure Part where
   sequence : String
@@ -32,10 +32,47 @@ structure Plasmid where
   elements : List DirectedPart
   -- constraint: must have at least one part to be circular
   is_valid : elements.length > 0
+  -- add the other constraints here later
+
+def complement (c : Char) : Char :=
+  match c with
+  | 'A' => 'T'
+  | 'T' => 'A'
+  | 'C' => 'G'
+  | 'G' => 'C'
+  | 'a' => 't'
+  | 't' => 'a'
+  | 'c' => 'g'
+  | 'g' => 'c'
+  | _   => c
+
+def reverseComplement (s : String) : String :=
+  let charList := s.toList.reverse
+  let complementedList := charList.map complement
+  String.ofList complementedList
+
+def getEffectiveRightOH (p : DirectedPart) : String :=
+  match p.orientation with
+  | Orientation.forward => p.part.rightOverhang
+  | Orientation.reverse => reverseComplement p.part.leftOverhang
+
+def getEffectiveLeftOH (p : DirectedPart) : String :=
+  match p.orientation with
+  | Orientation.forward => p.part.leftOverhang
+  | Orientation.reverse => reverseComplement p.part.rightOverhang
 
 def getNextPart (p : Plasmid) (idx : Nat) : DirectedPart :=
   -- just represent circularity with mods
   p.elements[idx % p.elements.length]!
+
+def overhangsMatch (p1 p2 : DirectedPart) : Prop :=
+  getEffectiveRightOH p1 = getEffectiveLeftOH p2
+
+def isMoCloValid (p : Plasmid) : Prop :=
+  ∀ (i : Nat), i < p.elements.length →
+    let current := p.elements[i]!
+    let next := getNextPart p (i+1)
+    overhangsMatch current next
 
 def circularDist (p : Plasmid) (i j : Nat) : Nat :=
   let n := p.elements.length
@@ -45,7 +82,6 @@ def isUpstream (p : Plasmid) (i j : Nat) : Prop :=
   -- dist from i to j is smaller  than full revolution
   let d := circularDist p i j
   d > 0 ∧ d < p.elements.length
-
 -- this is just an example of a constraint we could encode
 
 def hasValidTranscriptionUnit (p : Plasmid) : Prop :=
@@ -61,17 +97,4 @@ def hasValidTranscriptionUnit (p : Plasmid) : Prop :=
     promoter.orientation = rbs.orientation ∧
     rbs.orientation = cds.orientation ∧
     isUpstream p i j ∧ isUpstream p j k
-
-def overhangsMatch (p1 p2 : DirectedPart) : Prop :=
-  match p1.orientation, p2.orientation with
-  | Orientation.forward, Orientation.forward =>
-    -- would have to incorporate more logic I'm sure
-    p1.part.metadata = p2.part.metadata -- i just put this in
-  | _, _ => false -- fill in reverse strands logic
-
-def isMoCloValid (p : Plasmid) : Prop :=
-  ∀ (i : Nat), i < p.elements.length →
-    let current := p.elements[i]!
-    let next := getNextPart p (i+1)
-    overhangsMatch current next
 end
