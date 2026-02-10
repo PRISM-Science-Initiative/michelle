@@ -1,12 +1,30 @@
-# Create your construct
-p = Construct({'name': 'MyExperiment'})
+import os
+from genbank_to_python import parse_genbank
 
-# Add a CDS first
-p.add_part(gfp_part, orientation="forward")
+def process_folder(folder_name):
+    if not os.path.exists(folder_name):
+        print(f"Error: Folder '{folder_name}' not found.")
+        return
 
-# Now 'retroactively' add a promoter at the beginning (index 0) 
-# because a constraint requires it
-p.add_part(promoter_part, orientation="forward", index=0)
+    # filter for GenBank files
+    gbk_files = [f for f in os.listdir(folder_name) if f.endswith(('.gbk', '.gb'))]
 
-# Check the layout
-print(p) # Output: Construct: MyExperiment | Layout: [pCMV(F) -> GFP(F)]
+    for file_name in gbk_files:
+        file_path = os.path.join(folder_name, file_name)
+        print(f"=== PROCESSING: {file_name} ===")
+        
+        try:
+            plasmid = parse_genbank(file_path)
+            
+            # output the Lean4 code block
+            print(plasmid.to_lean_definition())
+            
+            # count parts for summary
+            print(f"Summary: Extracted {len(plasmid.parts_layout)} parts from {file_name}.")
+            print("\n" + "="*60 + "\n")
+            
+        except Exception as e:
+            print(f"Error processing {file_name}: {e}")
+
+if __name__ == "__main__":
+    process_folder("genbank files")

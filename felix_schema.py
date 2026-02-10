@@ -1,3 +1,40 @@
+from enum import Enum, auto
+
+class Role(Enum):
+# enumeration of biological roles into matching Lean4 types
+    # Transcription Basics
+    promoter = auto()
+    enhancer = auto()
+    rbs = auto()
+    cds = auto()
+    terminator = auto()
+
+    #other stuff
+    recombinase_site = auto()  # LoxP, FRT, etc.
+    structural = auto()        # ITRs, LTRs
+    origin = auto()            # Ori, f1_origin
+    repeat_region = auto()     # General repeats
+    verification = auto()
+    non_coding_rna = auto()
+    insulator = auto()
+    intron = auto()
+    
+    # Catch-all
+    selection_marker = auto()
+
+    def __str__(self):
+        # this helper ensures that when we print the role, 
+        # it looks like 'promoter' instead of 'Role.promoter'
+        return self.name
+
+class Orientation(Enum):
+# enumeration of DNA strand orientation into matching Lean4
+    forward = auto()
+    reverse = auto()
+
+    def __str__(self):
+        return self.name
+
 # this class represents the "lego brick" functional chunks of dna
 class BioPart:
     # complement table for base pairs
@@ -30,7 +67,10 @@ class BioPart:
 
 # this class represents the entire construct made out of chunks
 class Construct:
-    def __init__(self, registry_info, is_circular=True):
+    def __init__(self, registry_info, is_circular=True): 
+        # i'm thinking of changing this "registry_info" way of doing it
+        # I made this when I was just changing google sheets -> these files
+        #but now I'm working with genbank so I will probably change it
         self.name = registry_info.get('name', 'Unnamed_Construct')
         self.addgene_id = registry_info.get('id')
         self.intent = registry_info.get('intent', 'general_assembly')
@@ -109,25 +149,26 @@ class Construct:
     
     def to_lean_definition(self):
         lean_parts = []
-        for part, orientation in self.parts_layout:
-            roles_list = ", ".join([f"Role.{r}" for r in part.roles])
-            # if we end up changing lean implementation, we have to go back and
-            # change what's here
-            part_def = (
-                f"{{ part := {{ "
-                f"sequence := \"{part.sequence}\", "
-                f"roles := [{roles_list}], "
-                f"leftOverhang := \"{part.left_oh}\", "
-                f"rightOverhang := \"{part.right_oh}\", "
-                f"metadata := \"{part.metadata}\" }}, "
-                f"orientation := Orientation.{orientation} }}"
+        for p, orient in self.parts_layout:
+            roles_str = ", ".join([f"Role.{r}" for r in p.roles])
+            
+            # Use only the first 10bp and the length for the Lean model
+            # This keeps the verification file lightweight
+            display_seq = f"{p.sequence[:10]}...({len(p.sequence)}bp)"
+            
+            lean_parts.append(
+                f'{{ part := {{ sequence := "{display_seq}", roles := [{roles_str}], '
+                f'leftOverhang := "{p.left_oh}", rightOverhang := "{p.right_oh}", '
+                f'metadata := "{p.metadata}" }}, orientation := Orientation.{orient} }}'
             )
-            lean_parts.append(part_def)
-        parts_list_str = ",\n    ".join(lean_parts)
-        return (f"def {self.name.replace(' ', '_')} : Plasmid := {{\n"
-            f"  elements := [\n    {parts_list_str}\n  ],\n"
-            f"  is_valid := by simp; exact Nat.zero_lt_succ _ \n"
-            f"}}")
+        
+        # ensure name is Lean-compatible (no hyphens, no trailing underscores)
+        clean_name = self.name.replace('-', '_').strip('_')
+        
+        parts_list = ",\n    ".join(lean_parts)
+        return (f"def {clean_name} : Plasmid := {{\n"
+                f"  elements := [\n    {parts_list}\n  ],\n"
+                f"  is_valid := by simp; exact Nat.zero_lt_succ _ \n}}")
     
     def __repr__(self):
         layout_str = " -> ".join([f"{p.name}({o[0].upper()})" for p, o in self.parts_layout])

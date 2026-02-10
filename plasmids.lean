@@ -6,7 +6,15 @@ inductive Role where
   | rbs
   | cds
   | terminator
+  | recombinase_site
+  | structural
+  | origin
   | selection_marker
+  | repeat_region
+  | verification
+  | non_coding_rna
+  | insulator
+  | intron
   -- add more roles here when we come across them
   deriving BEq, Repr, Inhabited
 
