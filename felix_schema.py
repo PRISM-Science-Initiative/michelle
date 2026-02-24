@@ -8,14 +8,16 @@ class Role(Enum):
     rbs = auto()
     cds = auto()
     terminator = auto()
-
-    #other stuff
+    
+    # Logic & Physical Structure
     recombinase_site = auto()  # LoxP, FRT, etc.
     structural = auto()        # ITRs, LTRs
     origin = auto()            # Ori, f1_origin
     repeat_region = auto()     # General repeats
-    verification = auto()
-    non_coding_rna = auto()
+    
+    # Lab & Message
+    verification = auto()      # Primers/Probes
+    non_coding_rna = auto()    # sgRNAs, etc.
     insulator = auto()
     intron = auto()
     
@@ -40,14 +42,15 @@ class BioPart:
     # complement table for base pairs
     _COMPLEMENT_TABLE = str.maketrans("ATCGatcg", "TAGCtagc")
 
-    def __init__(self, part_id, name, roles, left_oh, right_oh, sequence, metadata):
-        self.part_id = part_id  # e.g., "U_WPRE"
-        self.name = name        # e.g., "WPRE"
+    def __init__(self, part_id, name, roles, left_oh, right_oh, sequence, metadata, confidence_score=1.0):
+        self.part_id = part_id
+        self.name = name
         self.sequence = sequence
-        self.roles = roles      # e.g., ["promoter", "rna_stabilizer"...]
+        self.roles = roles      # list of strings matching role names
         self.left_oh = left_oh # overhang
         self.right_oh = right_oh 
         self.metadata = metadata 
+        self.confidence_score = confidence_score # NEW
 
     @staticmethod 
     def rc(seq):
@@ -63,7 +66,7 @@ class BioPart:
         return self.roles[0] if self.roles else "unknown"
 
     def __repr__(self):
-        return f"<{self.name} ({self.primary_type}) | Roles: {self.roles[1:]}>"
+        return f"<{self.name} ({self.primary_type}) | Confidence: {self.confidence_score} | Roles: {self.roles[1:]}>"
 
 # this class represents the entire construct made out of chunks
 class Construct:
@@ -159,7 +162,8 @@ class Construct:
             lean_parts.append(
                 f'{{ part := {{ sequence := "{display_seq}", roles := [{roles_str}], '
                 f'leftOverhang := "{p.left_oh}", rightOverhang := "{p.right_oh}", '
-                f'metadata := "{p.metadata}" }}, orientation := Orientation.{orient} }}'
+                f'metadata := "{p.metadata}", confidenceScore := {p.confidence_score} }}, '
+                f'orientation := Orientation.{orient} }}'
             )
         
         # ensure name is Lean-compatible (no hyphens, no trailing underscores)
