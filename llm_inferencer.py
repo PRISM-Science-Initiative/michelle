@@ -9,7 +9,7 @@ class LLMInferencer:
         self.client = OpenAI(api_key=api_key)
     
     # takes the metadata and returns a (list of roles, confidence number)
-    def _get_role_list(self, metadata_text):
+    def get_role_list(self, metadata_text):
         prompt = f"""
         Act as a computational biologist. Analyze this DNA part metadata and
         assign one or more roles from this list: {[r.name for r in Role]}.

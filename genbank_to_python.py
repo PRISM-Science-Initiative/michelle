@@ -16,15 +16,16 @@ def parse_genbank(file_path):
     locus_match = re.search(r'LOCUS\s+(\S+)', content)
     raw_name = locus_match.group(1) if locus_match else os.path.basename(file_path)
     # make it appropriate for Lean syntax
-    name = raw_name.replace('-', '_').strip('_')
+    name = re.sub(r'\W+', '_', raw_name).strip('_')
 
     # extract full DNA sequence from ORIGIN
     origin_start = content.find("ORIGIN")
     if origin_start == -1: return None
-    full_seq = re.sub(r'[\d\s/]+', '', content[origin_start:].replace("ORIGIN", "").replace("//", "")).upper()
-
+    # cleanup
+    seq_block = content[origin_start:].replace("ORIGIN", "").replace("//", "")
+    full_seq = re.sub(r'[^acgtACGT]', '', seq_block).upper()
     # initialize resulting construct
-    construct = Construct({'name': name, 'intent': 'Extracted from GenBank'})
+    construct = Construct({'name': name, 'intent': 'GenBank imported construct'})
     # track coordinates to prevent duplicates: (start, end, orientation)
     seen_features = set()
 
@@ -68,17 +69,28 @@ def parse_genbank(file_path):
             # handle circular wrap-around for the right overhang
             r_oh = full_seq[end : end+4] if end+4 <= len(full_seq) else full_seq[:4]
 
+            # NEW: structured metadata string for semantic / LLM analysis
+            metadata = f"""
+                feature_type: {f_type}
+                location: {loc}
+                orientation: {orientation}
+                label: {final_label}
+                """
+            
+            # allows us to see boundary
+            part_id = f"{name}_{start}_{end}"
+
 
             ### THIS IS WHERE YOU WOULD MODIFY TO MAKE THIS RELEVANT TO YOUR OWN BIOPART ###
             ### please reach out to me if you want to work on this :)))
             part = BioPart(
-                part_id=f"ID_{final_label[:8].replace(' ', '_')}",
+                part_id=part_id,
                 name=final_label,
                 roles=["unknown"],
                 left_oh=l_oh, 
                 right_oh=r_oh,
                 sequence=p_seq,
-                metadata=f"Type: {f_type}, Loc: {loc}",
+                metadata=metadata,
                 confidence_score=0.0 
             )
             construct.add_part(part, orientation=orientation)

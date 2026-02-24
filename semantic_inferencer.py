@@ -10,20 +10,21 @@ from felix_schema import Role
 class SemanticInferencer:
     def __init__(self):
         # Load BioBERT - specialized for biomedical text
-        self.tokenizer = AutoTokenizer.from_pretrained("dmis-lab/biobert-v1.1-pubmed")
-        self.model = AutoModel.from_pretrained("dmis-lab/biobert-v1.1-pubmed")
+        self.tokenizer = AutoTokenizer.from_pretrained("monologg/biobert_v1.1_pubmed")
+        self.model = AutoModel.from_pretrained("monologg/biobert_v1.1_pubmed")
         
         # Ground Truth Reference Library
+        # semantic_inferencer.py
+        # semantic_inferencer.py
         self.references = [
-            (Role.promoter, "DNA sequence that initiates transcription of a particular gene"),
-            (Role.promoter, "CMV EF1a U6 CAG promoter high level expression"),
-            (Role.terminator, "sequence that marks the end of a gene or operon in genomic DNA"),
-            (Role.recombinase_site, "LoxP Lox2272 FRT site for site specific recombination"),
-            (Role.structural, "Inverted Terminal Repeat ITR for viral packaging"),
-            (Role.origin, "Origin of replication pBR322 ori f1 high copy number"),
-            (Role.rbs, "Ribosome binding site Kozak sequence translation initiation"),
-            (Role.verification, "PCR primer binding site sequencing verification probe"),
-            (Role.cds, "Protein coding sequence gene open reading frame")
+            (Role.promoter, "promoter CMV U6 EF1a CAG T7 SV40 transcription start"),
+            (Role.terminator, "terminator PolyA signal BGH hGH transcription stop"),
+            (Role.cds, "CDS coding sequence gene ORF EGFP mCherry Cre Cas9"),
+            (Role.origin, "origin replication ori pBR322 f1 colE1 high copy"),
+            (Role.verification, "primer sequencing forward reverse bind"),
+            (Role.selection_marker, "selection marker resistance bla AmpR KanR NeoR"),
+            (Role.recombinase_site, "LoxP FRT recombinase site Cre-mediated"),
+            (Role.structural, "ITR LTR viral structural packaging signal")
         ]
         self.roles, self.descriptions = zip(*self.references)
         self.index = self._build_index()
@@ -45,5 +46,7 @@ class SemanticInferencer:
     def get_score(self, text):
         query_vec = self._get_embedding(text).astype('float32')
         dist, indices = self.index.search(query_vec, k=1)
+        if dist[0][0] > 100.0: 
+            return Role.selection_marker, 0.05
         confidence = 1.0 / (1.0 + dist[0][0])
         return self.roles[indices[0][0]], round(float(confidence), 2)
