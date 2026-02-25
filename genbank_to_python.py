@@ -86,31 +86,42 @@ def get_smart_role(f_type, label):
     f_type_lower = f_type.lower()
     label_clean = label.lower()
     
-    # RULE 1: Strict GenBank types that don't need keyword scanning
+    assigned_roles = []
+    
+    # RULE 1: Strict GenBank types (High confidence, specific)
     if f_type_lower == 'primer_bind':
-        return Role.verification
+        assigned_roles.append(Role.verification)
     if f_type_lower == 'terminator':
-        return Role.terminator
+        assigned_roles.append(Role.terminator)
 
-    # RULE 2: Fuzzy keywords for ambiguous features 
-    # (We do this BEFORE Rule 3 so a CDS labeled "AmpR" gets caught as a selection_marker, not just a generic CDS)
+    # RULE 2: Fuzzy keywords (Highly specific functional roles)
+    # This will catch things like 'selection_marker' or 'protein_tag'
     for role, keywords in role_keywords.items():
         if any(key in label_clean for key in keywords):
-            return role
+            if role not in assigned_roles:
+                assigned_roles.append(role)
 
-    # RULE 3: Broad GenBank Type fallbacks (if keywords didn't catch it)
+    # RULE 3: Broad GenBank Type fallbacks (General structural roles)
+    # We do this LAST so that generic roles like 'cds' get appended 
+    # AFTER specific roles like 'selection_marker'.
     type_map = {
         'cds': Role.cds,
         'rep_origin': Role.origin,
-        'repeat_region': Role.repeat_region, 
+        'repeat_region': Role.repeat_region, # Ensure repeat_region is in your Enum!
         'polya_signal': Role.polyA_signal
     }
+    
     if f_type_lower in type_map:
-        return type_map[f_type_lower]
+        broad_role = type_map[f_type_lower]
+        if broad_role not in assigned_roles:
+            assigned_roles.append(broad_role)
 
     # RULE 4: Safe Catch-all 
-    # Changed from Role.selection_marker to prevent fatal assembly errors!
-    return Role.unknown
+    # If the list is empty, we found absolutely nothing.
+    if not assigned_roles:
+        return [Role.unknown]
+        
+    return assigned_roles
 
 def parse_genbank(file_path=None, mock_content=None):
     content = mock_content # using mock_content for testing
@@ -191,11 +202,11 @@ def parse_genbank(file_path=None, mock_content=None):
             ### THIS IS WHERE YOU WOULD MODIFY TO MAKE THIS RELEVANT TO YOUR OWN BIOPART ###
             ### please reach out to me if you want to work on this :)))
 
-            role = get_smart_role(f_type, final_label)
+            inferred_roles = get_smart_role(f_type, final_label)
             part = BioPart(
                 part_id=part_id,
                 name=final_label,
-                roles=[role.name],
+                roles=inferred_roles,
                 left_oh=l_oh, 
                 right_oh=r_oh,
                 sequence=p_seq,
