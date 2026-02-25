@@ -4,25 +4,31 @@ class Role(Enum):
 # enumeration of biological roles into matching Lean4 types
     # Transcription Basics
     promoter = auto()
+    operator = auto()
     enhancer = auto()
     rbs = auto()
     cds = auto()
     terminator = auto()
+    polyA_signal = auto()
     
     # Logic & Physical Structure
     recombinase_site = auto()  # LoxP, FRT, etc.
     structural = auto()        # ITRs, LTRs
     origin = auto()            # Ori, f1_origin
+    origin_transfer = auto()
     repeat_region = auto()     # General repeats
+    scar = auto()
     
     # Lab & Message
     verification = auto()      # Primers/Probes
+    protein_tag = auto()
     non_coding_rna = auto()    # sgRNAs, etc.
     insulator = auto()
     intron = auto()
     
     # Catch-all
     selection_marker = auto()
+    unknown = auto()
 
     def __str__(self):
         # this helper ensures that when we print the role, 
