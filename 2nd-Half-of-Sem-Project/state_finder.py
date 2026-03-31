@@ -53,8 +53,8 @@ def run_verification(circuit):
             # if any source is true, target is false
         
         elif inter['type'] == "activates":
-            s.assert_and_track(Implies(Or(*src_vars), tgt_var), label)
-            # if any source is true, target is true
+            # changed implies to == so proteins don't spontaneously turn on
+            s.assert_and_track((Or(*src_vars) == tgt_var), label)
             
         elif inter['type'] == "produces":
             # promoter -> protein
