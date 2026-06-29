@@ -1,6 +1,9 @@
 # =================================================================
 # METADATA & COMPLEX FEATURE CONFIGURATION
 # =================================================================
+
+# this is experimental and I haven't tested it yet...
+
 features:
   - name: "construct_id"
     type: "string"

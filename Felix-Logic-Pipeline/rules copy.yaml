@@ -3,6 +3,8 @@
 # This defines the data types and how to compute features from the CSV.
 # Available in environment: row (the current pandas row), pd, len, any, str
 # =================================================================
+
+# I used this to test the rules on Sarah's sample dataset and the E coli data
 features:
   - name: "construct_id"
     type: "string"

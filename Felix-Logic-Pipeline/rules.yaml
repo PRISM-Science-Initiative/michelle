@@ -3,6 +3,8 @@
 # This defines the data types and how to compute features from the CSV.
 # Available in environment: row (the current pandas row), pd, len, any, str
 # =================================================================
+
+# this is kind of a template document for what the rules should look like
 features:
   - name: "construct_id"
     type: "string"
