@@ -1,0 +1,195 @@
+# =================================================================
+# PLASMID FAILURE RULES
+# Purpose: Flag plasmid designs/contexts that are likely to fail.
+# =================================================================
+
+
+# these can be modified for specific datasets
+features:
+  # -----------------------------
+  # Identity / grouping
+  # -----------------------------
+  - name: "construct_id"
+    type: "string"
+    source: "str(row['construct_id']) if 'construct_id' in row and pd.notna(row['construct_id']) else str(row.get('gene_id', 'unknown_construct'))"
+
+  - name: "host_strain"
+    type: "string"
+    source: "str(row['host_strain']) if 'host_strain' in row and pd.notna(row['host_strain']) else 'unknown'"
+
+  # right now the following features are expected to be present in the input dataframe
+  # I want to modify the code in the future to be able to compute these values based on the sequence data, 
+  # but for now we will assume they are pre-computed and present in the input data
+
+  # -----------------------------
+  # Origin / compatibility
+  # -----------------------------
+  - name: "ori_present"
+    type: "bool"
+    source: "pd.notna(row['origin_name']) and str(row['origin_name']).strip() != '' if 'origin_name' in row else False"
+
+  - name: "ori_compat_group"
+    type: "string"
+    source: "str(row['origin_compat_group']) if 'origin_compat_group' in row and pd.notna(row['origin_compat_group']) else 'unknown'"
+
+  - name: "co_resident_ori_groups"
+    type: "string"
+    # expected format example: 'ColE1,p15A,IncF'
+    source: "str(row['co_resident_ori_groups']) if 'co_resident_ori_groups' in row and pd.notna(row['co_resident_ori_groups']) else ''"
+
+  - name: "ori_incompatibility_conflict"
+    type: "bool"
+    source: "((str(row['origin_compat_group']) in [g.strip() for g in str(row['co_resident_ori_groups']).split(',') if g.strip() != '']) if ('origin_compat_group' in row and 'co_resident_ori_groups' in row and pd.notna(row['origin_compat_group']) and pd.notna(row['co_resident_ori_groups'])) else False)"
+
+  # -----------------------------
+  # Toxicity / burden
+  # -----------------------------
+  - name: "toxic_gene_product"
+    type: "bool"
+    source: "bool(row['toxic_gene_product']) if 'toxic_gene_product' in row and pd.notna(row['toxic_gene_product']) else False"
+
+  - name: "metabolic_burden_score"
+    type: "real"
+    source: "float(row['metabolic_burden_score']) if 'metabolic_burden_score' in row and pd.notna(row['metabolic_burden_score']) else 0.0"
+
+  - name: "copy_number_est"
+    type: "real"
+    source: "float(row['copy_number_est']) if 'copy_number_est' in row and pd.notna(row['copy_number_est']) else 0.0"
+
+  - name: "expression_load_score"
+    type: "real"
+    source: "float(row['expression_load_score']) if 'expression_load_score' in row and pd.notna(row['expression_load_score']) else 0.0"
+
+  # -----------------------------
+  # Host compatibility / epigenetic context
+  # -----------------------------
+  - name: "methylation_match"
+    type: "bool"
+    source: "bool(row['methylation_match']) if 'methylation_match' in row and pd.notna(row['methylation_match']) else True"
+
+  - name: "promoter_host_match"
+    type: "bool"
+    source: "bool(row['promoter_host_match']) if 'promoter_host_match' in row and pd.notna(row['promoter_host_match']) else True"
+
+  # -----------------------------
+  # Sequence instability features
+  # -----------------------------
+  - name: "max_direct_repeat_bp"
+    type: "int"
+    source: "int(row['max_direct_repeat_bp']) if 'max_direct_repeat_bp' in row and pd.notna(row['max_direct_repeat_bp']) else 0"
+
+  - name: "max_inverted_repeat_bp"
+    type: "int"
+    source: "int(row['max_inverted_repeat_bp']) if 'max_inverted_repeat_bp' in row and pd.notna(row['max_inverted_repeat_bp']) else 0"
+
+  - name: "host_reca_positive"
+    type: "bool"
+    source: "bool(row['host_reca_positive']) if 'host_reca_positive' in row and pd.notna(row['host_reca_positive']) else False"
+
+  # -----------------------------
+  # Selection / antibiotic logic
+  # -----------------------------
+  - name: "selection_marker_present"
+    type: "bool"
+    source: "pd.notna(row['selection_marker']) and str(row['selection_marker']).strip() != '' if 'selection_marker' in row else False"
+
+  - name: "selection_antibiotic_applied"
+    type: "bool"
+    source: "bool(row['selection_antibiotic_applied']) if 'selection_antibiotic_applied' in row and pd.notna(row['selection_antibiotic_applied']) else False"
+
+  - name: "host_resistant_to_selection_drug"
+    type: "bool"
+    source: "bool(row['host_resistant_to_selection_drug']) if 'host_resistant_to_selection_drug' in row and pd.notna(row['host_resistant_to_selection_drug']) else False"
+
+  # -----------------------------
+  # Assembly-phase failure checks
+  # -----------------------------
+  - name: "identical_overhangs_detected"
+    type: "bool"
+    source: "bool(row['identical_overhangs_detected']) if 'identical_overhangs_detected' in row and pd.notna(row['identical_overhangs_detected']) else False"
+
+  - name: "internal_cut_sites_detected"
+    type: "bool"
+    source: "bool(row['internal_cut_sites_detected']) if 'internal_cut_sites_detected' in row and pd.notna(row['internal_cut_sites_detected']) else False"
+
+  # -----------------------------
+  # TU ordering / context effects
+  # -----------------------------
+  - name: "tu_order_risk_score"
+    type: "real"
+    source: "float(row['tu_order_risk_score']) if 'tu_order_risk_score' in row and pd.notna(row['tu_order_risk_score']) else 0.0"
+
+  - name: "promoter_promoter_collision"
+    type: "bool"
+    source: "bool(row['promoter_promoter_collision']) if 'promoter_promoter_collision' in row and pd.notna(row['promoter_promoter_collision']) else False"
+
+# =================================================================
+# LOGICAL FAILURE RULES
+# Convention:
+# - Each rule encodes a "must-not-fail" constraint.
+# - If violated, the construct should be considered failure-prone.
+# =================================================================
+rules:
+  - name: "Origin of Replication Must Exist"
+    type: "simple"
+    expr: "ori_present == True"
+
+  - name: "No Ori Incompatibility with Co-resident Plasmids"
+    type: "simple"
+    expr: "ori_incompatibility_conflict == False"
+
+  - name: "No Toxic Gene Product"
+    type: "simple"
+    expr: "toxic_gene_product == False"
+
+  - name: "Metabolic Burden Must Be Within Tolerable Range"
+    type: "simple"
+    expr: "metabolic_burden_score <= 0.70"
+
+  - name: "Combined Copy Number and Expression Load Constraint"
+    type: "conditional"
+    if: "copy_number_est > 30.0"
+    then: "expression_load_score <= 0.70"
+
+  - name: "Host Methylation Compatibility Required"
+    type: "simple"
+    expr: "methylation_match == True"
+
+  - name: "Promoter Must Match Host Strain Context"
+    type: "simple"
+    expr: "promoter_host_match == True"
+
+  - name: "Direct Repeat Risk in RecA+ Hosts"
+    type: "conditional"
+    if: "host_reca_positive == True"
+    then: "max_direct_repeat_bp < 30"
+
+  - name: "Inverted Repeat Structural Stability"
+    type: "simple"
+    expr: "max_inverted_repeat_bp < 40"
+
+  - name: "Selection Marker Required if Antibiotic Selection Used"
+    type: "conditional"
+    if: "selection_antibiotic_applied == True"
+    then: "selection_marker_present == True"
+
+  - name: "Selection Drug Must Not Be Pre-resisted by Host"
+    type: "conditional"
+    if: "selection_antibiotic_applied == True"
+    then: "host_resistant_to_selection_drug == False"
+
+  - name: "Assembly Overhang Uniqueness"
+    type: "simple"
+    expr: "identical_overhangs_detected == False"
+
+  - name: "No Internal Restriction Cut Sites in Assembly Parts"
+    type: "simple"
+    expr: "internal_cut_sites_detected == False"
+
+  - name: "TU Ordering Risk Must Stay Below Threshold"
+    type: "simple"
+    expr: "tu_order_risk_score <= 0.50"
+
+  - name: "Avoid Promoter-Promoter Interference Layouts"
+    type: "simple"
+    expr: "promoter_promoter_collision == False"
