@@ -1,0 +1,53 @@
+# =================================================================
+# METADATA & COMPLEX FEATURE CONFIGURATION
+# =================================================================
+features:
+  - name: "construct_id"
+    type: "string"
+    source: "str(row['gene_id'])"
+
+  - name: "expression_level"
+    type: "real"
+    source: "float(row['mean_active_tpm']) if pd.notna(row['mean_active_tpm']) else 0.0"
+
+  - name: "is_operon_downstream"
+    type: "bool"
+    source: "pd.isna(row['promoter_seq']) or len(str(row['promoter_seq']).strip()) == 0"
+
+  - name: "gc_content"
+    type: "real"
+    source: "(str(row['full_tu_seq']).upper().count('G') + str(row['full_tu_seq']).upper().count('C')) / len(str(row['full_tu_seq'])) if pd.notna(row['full_tu_seq']) else 0.0"
+
+  - name: "has_canonical_start"
+    type: "bool"
+    source: "str(row['cds_seq']).upper().startswith('ATG') if pd.notna(row['cds_seq']) else False"
+
+  - name: "has_alternative_start"
+    type: "bool"
+    source: "str(row['cds_seq']).upper().startswith(('GTG', 'TTG')) if pd.notna(row['cds_seq']) else False"
+
+  - name: "has_strong_rbs"
+    type: "bool"
+    source: "any(motif in str(row['utr5_seq']).upper() for motif in ['AGGAGG', 'GGAGG']) if pd.notna(row['utr5_seq']) else False"
+
+# =================================================================
+# EXPRESSION REGIME BOUNDING RULES
+# =================================================================
+rules:
+  - name: "High Expression Rule"
+    type: "conditional"
+    if: "expression_level >= 200.0"
+    # High expressors shouldn't have extreme GC content and usually rely on strong/canonical starts
+    then: "And(gc_content >= 0.40, gc_content <= 0.55, Or(has_canonical_start == True, is_operon_downstream == True))"
+
+  - name: "Alternative Translation Fine-Tuning"
+    type: "conditional"
+    if: "has_alternative_start == True"
+    # Scientific Hypothesis: Alternative starts are evolutionarily selected to prevent excessive over-expression
+    then: "expression_level < 150.0"
+
+  - name: "Operon Leakage Bound"
+    type: "conditional"
+    if: "And(is_operon_downstream == True, has_strong_rbs == False)"
+    # Downstream operon genes with weak RBS profiles should sit at a lower expression tier
+    then: "expression_level < 50.0"
