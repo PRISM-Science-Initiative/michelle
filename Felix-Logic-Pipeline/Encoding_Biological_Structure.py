@@ -10,10 +10,10 @@ class CircularSequence:
         self.duplicated_sequence_string = self.seq + self.seq
 
     def display_info(self):
+        # use python log instead of print statements in the future
         print(f"Sequence: {self.seq}")
         print(f"Length: {self.N}")
         print(f"Duplicated Sequence: {self.duplicated_sequence_string}")
-    
 
     def get_slice(self, start_index, length):
         # returns a slice of the circular sequence from start_index of length 'length'
